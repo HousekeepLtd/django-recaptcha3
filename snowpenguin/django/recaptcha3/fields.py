@@ -15,8 +15,14 @@ logger = logging.getLogger(__name__)
 
 class ReCaptchaField(forms.CharField):
     def __init__(self, attrs=None, *args, **kwargs):
+        default_threshold = (
+            settings.RECAPTCHA_SCORE_THRESHOLD
+            if hasattr(settings, 'RECAPTCHA_SCORE_THRESHOLD') else 0
+        )
+
         self._private_key = kwargs.pop('private_key', settings.RECAPTCHA_PRIVATE_KEY)
-        self._score_threshold = kwargs.pop('score_threshold', settings.RECAPTCHA_SCORE_THRESHOLD)
+        self._return_score = kwargs.pop('return_score', False)
+        self._score_threshold = kwargs.pop('score_threshold', default_threshold)
 
         if 'widget' not in kwargs:
             kwargs['widget'] = ReCaptchaHiddenInput()
@@ -27,7 +33,7 @@ class ReCaptchaField(forms.CharField):
 
         # Disable the check if we run a test unit
         if os.environ.get('RECAPTCHA_DISABLE', None) is not None:
-            return values[0]
+            return 1.0 if self._return_score else values[0]
 
         super(ReCaptchaField, self).clean(values[0])
         response_token = values[0]
@@ -51,15 +57,16 @@ class ReCaptchaField(forms.CharField):
 
         json_response = r.json()
 
-        logger.debug("Recieved response from reCaptcha server: %s", json_response)
+        logger.debug("Received response from reCaptcha server: %s", json_response)
         if bool(json_response['success']):
-            if self._score_threshold is not None and self._score_threshold > json_response['score']:
+            score = json_response['score']
+            if self._score_threshold is not None and self._score_threshold > score:
                 raise ValidationError(
                     _('reCaptcha score is too low. score: %(score)s'),
                     code='score',
-                    params={'score': json_response['score']},
+                    params={'score': score},
                 )
-            return values[0]
+            return score if self._return_score else values[0]
         else:
             if 'error-codes' in json_response:
                 if 'missing-input-secret' in json_response['error-codes'] or \
