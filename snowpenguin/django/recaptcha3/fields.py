@@ -8,6 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 
 import requests
 
+from snowpenguin.django.recaptcha3 import errors
 from snowpenguin.django.recaptcha3.widgets import ReCaptchaHiddenInput
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class ReCaptchaField(forms.CharField):
             logger.exception(e)
             raise ValidationError(
                 _('Connection to reCaptcha server failed'),
-                code='connection_failed'
+                code=errors.CONNECTION_FAILED
             )
 
         json_response = r.json()
@@ -63,7 +64,7 @@ class ReCaptchaField(forms.CharField):
             if self._score_threshold is not None and self._score_threshold > score:
                 raise ValidationError(
                     _('reCaptcha score is too low. score: %(score)s'),
-                    code='score',
+                    code=errors.SCORE,
                     params={'score': score},
                 )
             return score if self._return_score else values[0]
@@ -75,16 +76,16 @@ class ReCaptchaField(forms.CharField):
                     logger.exception('Invalid reCaptcha secret key detected')
                     raise ValidationError(
                         _('Connection to reCaptcha server failed'),
-                        code='invalid_secret',
+                        code=errors.INVALID_SECRET,
                     )
                 else:
                     raise ValidationError(
                         _('reCaptcha invalid or expired, try again'),
-                        code='expired',
+                        code=errors.EXPIRED,
                     )
             else:
                 logger.exception('No error-codes received from Google reCaptcha server')
                 raise ValidationError(
                     _('reCaptcha response from Google not valid, try again'),
-                    code='invalid_response',
+                    code=errors.INVALID_RESPONSE,
                 )

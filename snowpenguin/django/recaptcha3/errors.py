@@ -1,0 +1,5 @@
+CONNECTION_FAILED = 'connection_failed'
+EXPIRED = 'expired'
+INVALID_RESPONSE = 'invalid_response'
+INVALID_SECRET = 'invalid_secret'
+SCORE = 'score'
