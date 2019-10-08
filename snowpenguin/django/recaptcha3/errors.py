@@ -1,3 +1,4 @@
+ACTION = 'action'
 CONNECTION_FAILED = 'connection_failed'
 EXPIRED = 'expired'
 INVALID_RESPONSE = 'invalid_response'

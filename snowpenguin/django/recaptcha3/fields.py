@@ -24,6 +24,7 @@ class ReCaptchaField(forms.CharField):
         self._private_key = kwargs.pop('private_key', settings.RECAPTCHA_PRIVATE_KEY)
         self._return_score = kwargs.pop('return_score', False)
         self._score_threshold = kwargs.pop('score_threshold', default_threshold)
+        self._action = kwargs.pop('action', None)
 
         if 'widget' not in kwargs:
             kwargs['widget'] = ReCaptchaHiddenInput()
@@ -59,7 +60,16 @@ class ReCaptchaField(forms.CharField):
         json_response = r.json()
 
         logger.debug("Received response from reCaptcha server: %s", json_response)
+
         if bool(json_response['success']):
+            action = json_response['action']
+            if self._action and self._action != action:
+                raise ValidationError(
+                    _('Unexpected action: %(action)s'),
+                    code=errors.ACTION,
+                    params={'action': action},
+                )
+
             score = json_response['score']
             if self._score_threshold is not None and self._score_threshold > score:
                 raise ValidationError(
